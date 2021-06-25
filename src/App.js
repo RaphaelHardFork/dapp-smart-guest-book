@@ -1,8 +1,13 @@
 import "./App.css"
 import Dapp from "./Dapp"
+import ContractsContextProvider from "./contexts/ContractsContext"
 
 const App = () => {
-  return <div className="App"></div>
+  return (
+    <ContractsContextProvider>
+      <Dapp />
+    </ContractsContextProvider>
+  )
 }
 
 export default App
