@@ -1,6 +1,4 @@
 # TODO
 
-- ajout du tokenId dans l'event
-- ajout du role de modérateur
-- puis ajoute d'un bouton pour supprimer les commentaires
+- Récupéreration des commentaires avec les fonctions enumerable et non avec les event
 - Changer la base de données (localStorage => IPFS)

@@ -30,7 +30,7 @@ const SendComment = ({ comment, hashedComment }) => {
   }
 
   const debug = () => {
-    console.log(state.statusStyle)
+    console.log(state.commentsData)
   }
   return (
     <>

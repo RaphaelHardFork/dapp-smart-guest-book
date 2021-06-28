@@ -8,12 +8,11 @@ export const useSmartGuestBook = () => {
   const [contract] = useContext(ContractsContext)
 
   const initialState = {
-    txStatus: "",
-    errorMessage: "",
-    commentList: [],
+    commentsData: [],
     listOfArgs: [],
     displayedList: [],
     filter: false,
+    txStatus: "",
     statusStyle: "info",
   }
   const [state, dispatch] = useReducer(
@@ -26,21 +25,24 @@ export const useSmartGuestBook = () => {
       }
       return {
         ...initialState,
-        commentList: data,
+        commentsData: data,
       }
     }
   )
-  const { commentList, listOfArgs, filter } = state
-
-  useEffect(() => {
-    localStorage.setItem("comment-list", JSON.stringify(state.commentList))
-  }, [state.commentList])
+  const { commentsData, listOfArgs, filter } = state
 
   useEffect(() => {
     if (contract) {
-      const cb = (author, hashedComment) => {
+      const cb = (author, hashedComment, tokenId) => {
         if (author.toLowerCase() === web3State.account) {
-          dispatch({ type: "COMMENT_LINK", author, hashedComment })
+          dispatch({
+            type: "COMMENT_LINK",
+            author,
+            hashedComment,
+            tokenId: tokenId.toString(),
+          })
+          console.log("linkage")
+          localStorage.setItem("comment-list", JSON.stringify(commentsData))
         }
       }
       contract.on("CommentLeaved", cb)
@@ -48,7 +50,7 @@ export const useSmartGuestBook = () => {
         contract.off("CommentLeaved", cb)
       }
     }
-  }, [contract, web3State.account])
+  }, [contract, web3State.account, commentsData])
 
   useEffect(() => {
     if (contract) {
@@ -66,7 +68,7 @@ export const useSmartGuestBook = () => {
   }, [contract, web3State.account])
 
   useEffect(() => {
-    let linkedHash = commentList.map((elem) => {
+    let linkedHash = commentsData.map((elem) => {
       return elem.hash
     })
     let list = []
@@ -82,8 +84,9 @@ export const useSmartGuestBook = () => {
         list.push({
           author: arg[0],
           hashedComment: arg[1],
-          content: commentList[index].content,
-          txHash: commentList[index].txHash,
+          content: commentsData[index].content,
+          txHash: commentsData[index].txHash,
+          tokenId: commentsData[index].tokenId,
         })
       } else {
         list.push({
@@ -91,21 +94,12 @@ export const useSmartGuestBook = () => {
           hashedComment: arg[1],
           content: "Content not linked",
           txHash: "TxHash not found yet",
+          tokenId: "?",
         })
       }
     }
     dispatch({ type: "DISPLAY_LIST", payload: list })
-
-    /*
-        let list = state.commentList.map((elem) => {
-      return elem.hash
-    })
-
-    console.log(list.indexOf(state.listOfArgs[17][1]))
-    console.log(state.commentList[5])
-    console.log(state.listOfArgs[17][1])
-    */
-  }, [filter, listOfArgs, commentList, dispatch, web3State.account])
+  }, [filter, listOfArgs, commentsData, dispatch, web3State.account])
 
   useEffect(() => {
     dispatch({ type: "TX_STATUS" })

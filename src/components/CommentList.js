@@ -6,6 +6,9 @@ import {
   Switch,
   FormControl,
   FormLabel,
+  Link,
+  Flex,
+  Button,
 } from "@chakra-ui/react"
 import { useContext } from "react"
 import { Web3Context } from "web3-hooks"
@@ -13,8 +16,21 @@ import { useSmartGuestBook } from "../hooks/useSmartGuestBook"
 
 const CommentList = () => {
   const [web3State] = useContext(Web3Context)
-  const [, state, dispatch] = useSmartGuestBook()
-  const { filter, displayedList } = state
+  const [smartGuestBook, state, dispatch] = useSmartGuestBook()
+  const { filter, displayedList, txStatus } = state
+
+  async function handleDeleteComment(tokenId) {
+    dispatch({ type: "TX_WAITING" })
+    try {
+      let tx = await smartGuestBook.deleteComment(tokenId)
+      dispatch({ type: "TX_PENDING" })
+      await tx.wait()
+      dispatch({ type: "TX_SUCCESS" })
+    } catch (e) {
+      console.log(e)
+      dispatch({ type: "TX_FAILURE", payload: e })
+    }
+  }
 
   return (
     <Container maxW="container.lg">
@@ -51,16 +67,32 @@ const CommentList = () => {
               }
               p="10"
             >
-              <Heading>Comment n°{0}</Heading>
-              <Text>Author: {elem.author}</Text>
-              <Text>Hashed comment: {elem.hashedComment}</Text>
-              <Text>Content: {elem.content}</Text>
-              <Text
-                href={`https://rinkeby.etherscan.io/tx/${elem.txHash}`}
-                as="a"
-              >
-                {elem.txHash}
-              </Text>
+              <Flex justifyContent="space-between">
+                <Box>
+                  <Heading>Comment n°{elem.tokenId}</Heading>
+                  <Text>Author: {elem.author}</Text>
+                  <Text>Hashed comment: {elem.hashedComment}</Text>
+                  <Text>Content: {elem.content}</Text>
+                  <Link
+                    href={`https://rinkeby.etherscan.io/tx/${elem.txHash}`}
+                    as="a"
+                    isExternal
+                  >
+                    {elem.txHash}
+                  </Link>
+                </Box>
+
+                <Button
+                  isLoading={
+                    txStatus.startsWith("Waiting") ||
+                    txStatus.startsWith("Pending")
+                  }
+                  onClick={() => handleDeleteComment(elem.tokenId)}
+                  colorScheme="red"
+                >
+                  Delete
+                </Button>
+              </Flex>
             </Box>
           </Box>
         )
