@@ -30,6 +30,18 @@ export const commentReducer = (state, action) => {
         filter: !state.filter,
       }
 
+    case "DELETED":
+      return {
+        ...state,
+        deleted: !state.deleted,
+      }
+
+    case "MODERATOR":
+      return {
+        ...state,
+        moderator: action.payload,
+      }
+
     case "TX_STATUS":
       const statusStyle = (CountStat) => {
         switch (CountStat) {
@@ -86,13 +98,22 @@ export const commentReducer = (state, action) => {
       }
 
     case "COMMENT_HISTORY":
-      let argsList = []
-      for (let elem of action.payload) {
-        argsList.push(elem.args)
+      let commentsList = []
+      let deletedId = action.commentDeleted.map((elem) => {
+        return elem.args[2].toString()
+      })
+      for (let elem of action.commentAdded) {
+        commentsList.push({
+          author: elem.args[0].toLowerCase(),
+          hashedComment: elem.args[1],
+          tokenId: elem.args[2].toString(),
+          txHash: elem.transactionHash,
+          deleted: deletedId.includes(elem.args[2].toString()),
+        })
       }
       return {
         ...state,
-        listOfArgs: argsList,
+        listOfComments: commentsList,
       }
 
     case "DISPLAY_LIST":

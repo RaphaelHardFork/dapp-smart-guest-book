@@ -30,6 +30,7 @@ const Dapp = () => {
                 placeholder="Type your comment here..."
                 value={comment}
                 mb="4"
+                minH="250"
               />
               <Text mb="4">Your comment:</Text>
               <Text mb="4">

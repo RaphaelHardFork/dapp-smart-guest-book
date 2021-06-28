@@ -30,7 +30,8 @@ const SendComment = ({ comment, hashedComment }) => {
   }
 
   const debug = () => {
-    console.log(state.commentsData)
+    console.log(state.filter)
+    console.log(state.deleted)
   }
   return (
     <>

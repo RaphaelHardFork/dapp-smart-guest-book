@@ -1,3 +1,4 @@
+import { ethers } from "ethers"
 import { useContext, useEffect, useReducer } from "react"
 import { Web3Context } from "web3-hooks"
 import { ContractsContext } from "../contexts/ContractsContext"
@@ -9,11 +10,13 @@ export const useSmartGuestBook = () => {
 
   const initialState = {
     commentsData: [],
-    listOfArgs: [],
+    listOfComments: [],
     displayedList: [],
+    moderator: false,
     filter: false,
     txStatus: "",
     statusStyle: "info",
+    deleted: false,
   }
   const [state, dispatch] = useReducer(
     commentReducer,
@@ -29,7 +32,22 @@ export const useSmartGuestBook = () => {
       }
     }
   )
-  const { commentsData, listOfArgs, filter } = state
+  const { commentsData, listOfComments, filter, deleted } = state
+
+  useEffect(() => {
+    const checkRole = async () => {
+      try {
+        let isModerator = await contract.hasRole(
+          ethers.utils.id("MODERATOR_ROLE"),
+          web3State.account
+        )
+        dispatch({ type: "MODERATOR", payload: isModerator })
+      } catch (e) {
+        console.log(e)
+      }
+    }
+    checkRole()
+  }, [contract, web3State.account])
 
   useEffect(() => {
     if (contract) {
@@ -56,9 +74,14 @@ export const useSmartGuestBook = () => {
     if (contract) {
       const getHistory = async () => {
         try {
-          let commentHistory = await contract.filters.CommentLeaved(null, null)
-          commentHistory = await contract.queryFilter(commentHistory)
-          dispatch({ type: "COMMENT_HISTORY", payload: commentHistory })
+          let commentAdded = await contract.filters.CommentLeaved()
+          let commentDeleted = await contract.filters.CommentDeleted()
+          console.log("COMMENT HISTORY")
+          commentAdded = await contract.queryFilter(commentAdded)
+          commentDeleted = await contract.queryFilter(commentDeleted)
+          console.log(commentAdded)
+          console.log(commentDeleted)
+          dispatch({ type: "COMMENT_HISTORY", commentAdded, commentDeleted })
         } catch (e) {
           console.log(e)
         }
@@ -73,33 +96,47 @@ export const useSmartGuestBook = () => {
     })
     let list = []
 
-    for (let arg of listOfArgs) {
+    for (let comment of listOfComments) {
       if (filter) {
-        if (arg[0].toLowerCase() !== web3State.account.toLowerCase()) {
+        if (comment.author !== web3State.account.toLowerCase()) {
           continue
         }
       }
-      let index = linkedHash.indexOf(arg[1])
+      if (!deleted) {
+        if (comment.deleted) {
+          continue
+        }
+      }
+      let index = linkedHash.indexOf(comment.hashedComment)
       if (index !== -1) {
         list.push({
-          author: arg[0],
-          hashedComment: arg[1],
+          author: comment.author,
+          hashedComment: comment.hashedComment,
           content: commentsData[index].content,
-          txHash: commentsData[index].txHash,
-          tokenId: commentsData[index].tokenId,
+          txHash: comment.txHash,
+          tokenId: comment.tokenId,
+          deleted: comment.deleted,
         })
       } else {
         list.push({
-          author: arg[0],
-          hashedComment: arg[1],
+          author: comment.author,
+          hashedComment: comment.hashedComment,
           content: "Content not linked",
-          txHash: "TxHash not found yet",
-          tokenId: "?",
+          txHash: comment.txHash,
+          tokenId: comment.tokenId,
+          deleted: comment.deleted,
         })
       }
     }
     dispatch({ type: "DISPLAY_LIST", payload: list })
-  }, [filter, listOfArgs, commentsData, dispatch, web3State.account])
+  }, [
+    filter,
+    listOfComments,
+    commentsData,
+    dispatch,
+    web3State.account,
+    deleted,
+  ])
 
   useEffect(() => {
     dispatch({ type: "TX_STATUS" })

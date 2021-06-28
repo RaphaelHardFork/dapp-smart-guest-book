@@ -1,4 +1,4 @@
 # TODO
 
-- Récupéreration des commentaires avec les fonctions enumerable et non avec les event
+- changer le dashboard !!
 - Changer la base de données (localStorage => IPFS)

@@ -17,7 +17,7 @@ import { useSmartGuestBook } from "../hooks/useSmartGuestBook"
 const CommentList = () => {
   const [web3State] = useContext(Web3Context)
   const [smartGuestBook, state, dispatch] = useSmartGuestBook()
-  const { filter, displayedList, txStatus } = state
+  const { filter, displayedList, txStatus, moderator } = state
 
   async function handleDeleteComment(tokenId) {
     dispatch({ type: "TX_WAITING" })
@@ -34,26 +34,46 @@ const CommentList = () => {
 
   return (
     <Container maxW="container.lg">
-      <FormControl
-        maxW={{ base: "50%", xl: "20%" }}
-        mx={{ base: "auto", xl: "0" }}
-        display="flex"
-        alignItems="center"
-        justifyContent={{ base: "center", xl: "start" }}
-        mb="1rem"
-      >
-        <Switch
-          onChange={() => dispatch({ type: "FILTER" })}
-          me="0.75rem"
-          id="transfer-from"
-        />
-        <FormLabel my="auto" fontSize="1.2rem" htmlFor="transfer-from">
-          {filter ? "My comments" : "All comments"}
-        </FormLabel>
-      </FormControl>
-      {displayedList.map((elem) => {
-        return (
-          <Box as="ul">
+      <Flex justifyContent="space-between">
+        <FormControl
+          maxW={{ base: "50%", xl: "20%" }}
+          mx={{ base: "auto", xl: "0" }}
+          display="flex"
+          alignItems="center"
+          justifyContent={{ base: "center", xl: "start" }}
+          mb="1rem"
+        >
+          <Switch
+            onChange={() => dispatch({ type: "FILTER" })}
+            me="0.75rem"
+            id="transfer-from"
+          />
+          <FormLabel my="auto" fontSize="1.2rem" htmlFor="transfer-from">
+            {filter ? "My comments" : "All comments"}
+          </FormLabel>
+        </FormControl>
+        <FormControl
+          minW="35ch"
+          maxW={{ base: "50%", xl: "20%" }}
+          mx={{ base: "auto", xl: "0" }}
+          display="flex"
+          alignItems="center"
+          justifyContent={{ base: "center", xl: "start" }}
+          mb="1rem"
+        >
+          <Switch
+            onChange={() => dispatch({ type: "DELETED" })}
+            me="0.75rem"
+            id="deleted-comments"
+          />
+          <FormLabel my="auto" fontSize="1.2rem" htmlFor="deleted-comments">
+            See deleted comments
+          </FormLabel>
+        </FormControl>
+      </Flex>
+      <Box as="ul">
+        {displayedList.map((elem) => {
+          return (
             <Box
               as="li"
               key={elem.hashedComment}
@@ -61,28 +81,47 @@ const CommentList = () => {
               color="black"
               borderRadius="30"
               bg={
-                elem.author.toLowerCase() === web3State.account
+                elem.deleted
+                  ? "whiteAlpha.600"
+                  : elem.author === web3State.account
                   ? "palevioletred"
                   : "orange.200"
               }
               p="10"
             >
-              <Flex justifyContent="space-between">
-                <Box>
-                  <Heading>Comment n°{elem.tokenId}</Heading>
-                  <Text>Author: {elem.author}</Text>
-                  <Text>Hashed comment: {elem.hashedComment}</Text>
-                  <Text>Content: {elem.content}</Text>
-                  <Link
-                    href={`https://rinkeby.etherscan.io/tx/${elem.txHash}`}
-                    as="a"
-                    isExternal
-                  >
-                    {elem.txHash}
-                  </Link>
+              <Box pe="4">
+                <Heading isTruncated>Comment from {elem.author}</Heading>
+                <Text textAlign="end">Comment n°{elem.tokenId}</Text>
+                <Text>
+                  {" "}
+                  <Text as="b">Hashed comment:</Text> {elem.hashedComment}
+                </Text>
+                <Link
+                  href={`https://rinkeby.etherscan.io/tx/${elem.txHash}`}
+                  as="a"
+                  isExternal
+                >
+                  {elem.txHash}
+                </Link>
+                <Heading fontSize="2xl" my="4" as="h3">
+                  Content:
+                </Heading>
+                <Box borderRadius="10" p="4" bg="white">
+                  <Text>
+                    {elem.deleted ? (
+                      <Text as="b" color="red">
+                        Comment deleted
+                      </Text>
+                    ) : (
+                      elem.content
+                    )}
+                  </Text>
                 </Box>
-
+              </Box>
+              {moderator && !elem.deleted && (
                 <Button
+                  mt="4"
+                  size="lg"
                   isLoading={
                     txStatus.startsWith("Waiting") ||
                     txStatus.startsWith("Pending")
@@ -92,11 +131,11 @@ const CommentList = () => {
                 >
                   Delete
                 </Button>
-              </Flex>
+              )}
             </Box>
-          </Box>
-        )
-      })}
+          )
+        })}
+      </Box>
     </Container>
   )
 }
