@@ -11,7 +11,7 @@ export const useSmartGuestBook = () => {
     txStatus: "",
     errorMessage: "",
     commentList: [],
-    listOfHash: [],
+    listOfArgs: [],
   }
   const [state, dispatch] = useReducer(
     commentReducer,
@@ -29,8 +29,9 @@ export const useSmartGuestBook = () => {
   )
 
   useEffect(() => {
+    console.log("SAVE INFO")
     localStorage.setItem("comment-list", JSON.stringify(state.commentList))
-  }, [state.commentList])
+  }, [state])
 
   useEffect(() => {
     if (contract) {
@@ -50,12 +51,8 @@ export const useSmartGuestBook = () => {
     if (contract) {
       const getHistory = async () => {
         try {
-          let commentHistory = await contract.filters.CommentLeaved(
-            web3State.account,
-            null
-          )
+          let commentHistory = await contract.filters.CommentLeaved(null, null)
           commentHistory = await contract.queryFilter(commentHistory)
-          console.log(commentHistory)
           dispatch({ type: "COMMENT_HISTORY", payload: commentHistory })
         } catch (e) {
           console.log(e)

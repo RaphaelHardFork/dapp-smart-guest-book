@@ -42,14 +42,14 @@ export const commentReducer = (state, action) => {
         commentList: state.commentList,
       }
     case "COMMENT_HISTORY":
-      let hashList = []
+      let argsList = []
       for (let elem of action.payload) {
-        hashList.push(elem.args[1])
+        argsList.push(elem.args)
       }
 
       return {
         ...state,
-        listOfHash: hashList,
+        listOfArgs: argsList,
       }
     default:
       throw new Error(
