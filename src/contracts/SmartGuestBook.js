@@ -1,4 +1,4 @@
-export const contractAddress = "0x0066a41d381B4aE90AA325E09b6C3dDD913E42Cd"
+export const contractAddress = "0xd7feD5C6CD2c05Fd7B18C84D88ECe10C9Ed4bad9"
 
 export const contractABI = [
   {
@@ -95,6 +95,12 @@ export const contractABI = [
         internalType: "bytes32",
         name: "hashedComment",
         type: "bytes32",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "cid",
+        type: "string",
       },
       {
         indexed: false,
@@ -265,7 +271,7 @@ export const contractABI = [
       },
       {
         internalType: "string",
-        name: "uri",
+        name: "cid",
         type: "string",
       },
     ],
@@ -309,7 +315,7 @@ export const contractABI = [
           },
           {
             internalType: "string",
-            name: "uri",
+            name: "cid",
             type: "string",
           },
         ],

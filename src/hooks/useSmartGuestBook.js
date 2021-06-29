@@ -3,11 +3,14 @@ import { useContext, useEffect, useReducer } from "react"
 import { Web3Context } from "web3-hooks"
 import { ContractsContext } from "../contexts/ContractsContext"
 import { commentReducer } from "../reducers/commentReducer"
+import { usePinataCloud } from "./usePinataCloud"
 
 export const useSmartGuestBook = () => {
   const [web3State] = useContext(Web3Context)
   const [contract] = useContext(ContractsContext)
+  const [pinJSON, readJSON] = usePinataCloud()
 
+  /*
   const initialState = {
     commentsData: [],
     listOfComments: [],
@@ -32,7 +35,17 @@ export const useSmartGuestBook = () => {
       }
     }
   )
-  const { commentsData, listOfComments, filter, deleted } = state
+  */
+  const [state, dispatch] = useReducer(commentReducer, {
+    listOfComments: [],
+    displayedList: [],
+    moderator: false,
+    filter: false,
+    txStatus: "",
+    statusStyle: "info",
+    deleted: false,
+  })
+  const { listOfComments, filter, deleted } = state
 
   useEffect(() => {
     const checkRole = async () => {
@@ -51,7 +64,28 @@ export const useSmartGuestBook = () => {
 
   useEffect(() => {
     if (contract) {
-      const cb = (author, hashedComment, tokenId) => {
+      const cb = (author, hashedComment, cid, tokenId, event) => {
+        console.log(event)
+        const read = async (cid) => {
+          return await readJSON(cid)
+        }
+        let content = read(cid)
+        console.log(content)
+
+        const metadata = {
+          tokenId,
+          author,
+          hashedComment,
+          content, // need modification
+          deleted: false,
+          txHash: event.transactionHash,
+        }
+        const pin = async () => {
+          pinJSON(metadata)
+        }
+        // CHANGE TOKEN URI NOW?
+        //pin()
+        /*
         if (author.toLowerCase() === web3State.account) {
           dispatch({
             type: "COMMENT_LINK",
@@ -62,13 +96,14 @@ export const useSmartGuestBook = () => {
           console.log("linkage")
           localStorage.setItem("comment-list", JSON.stringify(commentsData))
         }
+        */
       }
       contract.on("CommentLeaved", cb)
       return () => {
         contract.off("CommentLeaved", cb)
       }
     }
-  }, [contract, web3State.account, commentsData])
+  }, [contract, web3State.account, pinJSON])
 
   useEffect(() => {
     if (contract) {
@@ -90,6 +125,7 @@ export const useSmartGuestBook = () => {
     }
   }, [contract, web3State.account])
 
+  /*
   useEffect(() => {
     let linkedHash = commentsData.map((elem) => {
       return elem.hash
@@ -137,6 +173,7 @@ export const useSmartGuestBook = () => {
     web3State.account,
     deleted,
   ])
+  */
 
   useEffect(() => {
     dispatch({ type: "TX_STATUS" })

@@ -6,6 +6,12 @@ export const commentReducer = (state, action) => {
         txStatus: "Waiting for confirmation",
       }
 
+    case "TX_PIN":
+      return {
+        ...state,
+        txStatus: "Pinning to IPFS",
+      }
+
     case "TX_PENDING":
       return {
         ...state,

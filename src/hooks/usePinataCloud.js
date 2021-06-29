@@ -10,7 +10,8 @@ export const usePinataCloud = () => {
           pinata_secret_api_key: `${process.env.REACT_APP_API_SECRET}`,
         },
       })
-      return response
+      console.log("PINNED to IPFS")
+      return response.data.IpfsHash
     } catch (e) {
       console.error(e)
     }
