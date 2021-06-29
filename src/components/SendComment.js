@@ -6,7 +6,7 @@ import { useSmartGuestBook } from "../hooks/useSmartGuestBook"
 
 const SendComment = ({ comment, hashedComment }) => {
   const [web3State] = useContext(Web3Context)
-  const [pinJSON] = usePinataCloud()
+  const [pinJSON, readJSON] = usePinataCloud()
   const [smartGuestBook, state, dispatch] = useSmartGuestBook()
   const { txStatus, statusStyle } = state
 
@@ -36,9 +36,8 @@ const SendComment = ({ comment, hashedComment }) => {
     }
   }
 
-  const debug = () => {
-    console.log(state.filter)
-    console.log(state.deleted)
+  const debug = async () => {
+    console.log(state.listOfComments)
   }
   return (
     <>
@@ -57,7 +56,8 @@ const SendComment = ({ comment, hashedComment }) => {
               !web3State.isLogged ||
               web3State.networkName !== "Rinkeby" ||
               txStatus.startsWith("Waiting") ||
-              txStatus.startsWith("Pending")
+              txStatus.startsWith("Pending") ||
+              txStatus.startsWith("Pinning")
             }
           >
             {!web3State.isLogged

@@ -18,14 +18,9 @@ export const usePinataCloud = () => {
   }
 
   const readJSON = async (cid) => {
-    const url = `https://gateway.pinata.cloud/ipfs/${cid}`
+    const url = `https://gateway.ipfs.io/ipfs/${cid}#x-ipfs-companion-no-redirect`
     try {
-      const response = await axios.get(url, {
-        headers: {
-          pinata_api_key: `${process.env.REACT_APP_API_KEY}`,
-          pinata_secret_api_key: `${process.env.REACT_APP_API_SECRET}`,
-        },
-      })
+      const response = await axios.get(url)
       return response.data
     } catch (e) {
       console.log(e)

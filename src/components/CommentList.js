@@ -17,7 +17,7 @@ import { useSmartGuestBook } from "../hooks/useSmartGuestBook"
 const CommentList = () => {
   const [web3State] = useContext(Web3Context)
   const [smartGuestBook, state, dispatch] = useSmartGuestBook()
-  const { filter, displayedList, txStatus, moderator } = state
+  const { filter, displayedList, txStatus, moderator, listOfComments } = state
 
   async function handleDeleteComment(tokenId) {
     dispatch({ type: "TX_WAITING" })
@@ -72,7 +72,7 @@ const CommentList = () => {
         </FormControl>
       </Flex>
       <Box as="ul">
-        {displayedList.map((elem) => {
+        {listOfComments.map((elem) => {
           return (
             <Box
               as="li"
@@ -103,6 +103,7 @@ const CommentList = () => {
                 >
                   {elem.txHash}
                 </Link>
+                <Text>{elem.cid}</Text>
                 <Heading fontSize="2xl" my="4" as="h3">
                   Content:
                 </Heading>

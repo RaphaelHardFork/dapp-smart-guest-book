@@ -2,11 +2,6 @@
 
 - Changer la base de données (localStorage => IPFS)
 - changer le token URI après la création du NFT pour avoir toute les métadata (tokenId,TxHash,...)
-- solution pour lire IPFS (access control) :
-
-```
-Access to XMLHttpRequest at 'https://gateway.pinata.cloud/ipfs/QmTpvB3pmvaN4cMN6WXhdpE1dZ7N2oPiosC3hxb2nqSAnG' from origin 'http://localhost:3000' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-```
 
 ## IPFS
 

@@ -104,22 +104,9 @@ export const commentReducer = (state, action) => {
       }
 
     case "COMMENT_HISTORY":
-      let commentsList = []
-      let deletedId = action.commentDeleted.map((elem) => {
-        return elem.args[2].toString()
-      })
-      for (let elem of action.commentAdded) {
-        commentsList.push({
-          author: elem.args[0].toLowerCase(),
-          hashedComment: elem.args[1],
-          tokenId: elem.args[2].toString(),
-          txHash: elem.transactionHash,
-          deleted: deletedId.includes(elem.args[2].toString()),
-        })
-      }
       return {
         ...state,
-        listOfComments: commentsList,
+        listOfComments: action.commentsList,
       }
 
     case "DISPLAY_LIST":

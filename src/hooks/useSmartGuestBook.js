@@ -1,14 +1,16 @@
 import { ethers } from "ethers"
-import { useContext, useEffect, useReducer } from "react"
+import { useCallback, useContext, useEffect, useReducer, useState } from "react"
 import { Web3Context } from "web3-hooks"
 import { ContractsContext } from "../contexts/ContractsContext"
 import { commentReducer } from "../reducers/commentReducer"
 import { usePinataCloud } from "./usePinataCloud"
+const axios = require("axios")
 
 export const useSmartGuestBook = () => {
   const [web3State] = useContext(Web3Context)
   const [contract] = useContext(ContractsContext)
   const [pinJSON, readJSON] = usePinataCloud()
+  const [cid, setCID] = useState("")
 
   /*
   const initialState = {
@@ -48,35 +50,31 @@ export const useSmartGuestBook = () => {
   const { listOfComments, filter, deleted } = state
 
   useEffect(() => {
-    const checkRole = async () => {
-      try {
-        let isModerator = await contract.hasRole(
-          ethers.utils.id("MODERATOR_ROLE"),
-          web3State.account
-        )
-        dispatch({ type: "MODERATOR", payload: isModerator })
-      } catch (e) {
-        console.log(e)
+    if (contract) {
+      const checkRole = async () => {
+        try {
+          let isModerator = await contract.hasRole(
+            ethers.utils.id("MODERATOR_ROLE"),
+            web3State.account
+          )
+          dispatch({ type: "MODERATOR", payload: isModerator })
+        } catch (e) {
+          console.log(e)
+        }
       }
+      checkRole()
     }
-    checkRole()
   }, [contract, web3State.account])
 
   useEffect(() => {
     if (contract) {
-      const cb = (author, hashedComment, cid, tokenId, event) => {
-        console.log(event)
-        const read = async (cid) => {
-          return await readJSON(cid)
-        }
-        let content = read(cid)
-        console.log(content)
-
+      const cb = async (author, hashedComment, cid, tokenId, event) => {
+        const content = await readJSON(cid)
         const metadata = {
-          tokenId,
+          tokenId: tokenId.toString(),
           author,
           hashedComment,
-          content, // need modification
+          content: content.comment, // need modification
           deleted: false,
           txHash: event.transactionHash,
         }
@@ -103,20 +101,53 @@ export const useSmartGuestBook = () => {
         contract.off("CommentLeaved", cb)
       }
     }
-  }, [contract, web3State.account, pinJSON])
+  }, [contract, web3State.account, pinJSON, readJSON])
 
   useEffect(() => {
     if (contract) {
+      const readJSON = async (cid) => {
+        const url = `https://gateway.ipfs.io/ipfs/${cid}#x-ipfs-companion-no-redirect`
+        try {
+          const response = await axios.get(url)
+          return response.data.comment
+        } catch (e) {
+          console.log(e)
+        }
+      }
       const getHistory = async () => {
         try {
           let commentAdded = await contract.filters.CommentLeaved()
           let commentDeleted = await contract.filters.CommentDeleted()
-          console.log("COMMENT HISTORY")
           commentAdded = await contract.queryFilter(commentAdded)
           commentDeleted = await contract.queryFilter(commentDeleted)
-          console.log(commentAdded)
-          console.log(commentDeleted)
-          dispatch({ type: "COMMENT_HISTORY", commentAdded, commentDeleted })
+          const deletedId = commentDeleted.map((elem) => {
+            return elem.args[3].toString()
+          })
+          const deletedTx = commentDeleted.map((elem) => {
+            return elem.transactionHash
+          })
+          let commentsList = []
+          const createList = async () => {
+            for (let event of commentAdded) {
+              console.log(event.args["cid"])
+              //console.log(await readJSON(event.args["cid"]))
+              let index = deletedId.indexOf(event.args["tokenId"].toString())
+              commentsList.push({
+                author: event.args["author"].toLowerCase(),
+                tokenId: event.args["tokenId"].toString(),
+                hashedComment: event.args["hashedComment"],
+                cid: event.args["cid"],
+                content: await readJSON(event.args["cid"]),
+                deleted: index !== -1 ? true : false,
+                txHash:
+                  index !== -1
+                    ? [event.transactionHash, deletedTx[index]]
+                    : [event.transactionHash],
+              })
+            }
+          }
+          createList()
+          dispatch({ type: "COMMENT_HISTORY", commentsList })
         } catch (e) {
           console.log(e)
         }
