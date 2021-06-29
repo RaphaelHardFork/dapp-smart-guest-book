@@ -44,8 +44,18 @@ const SendComment = ({ comment, hashedComment }) => {
             }
             onClick={handleSendComment}
             colorScheme="purple"
+            disabled={
+              !web3State.isLogged ||
+              web3State.networkName !== "Rinkeby" ||
+              txStatus.startsWith("Waiting") ||
+              txStatus.startsWith("Pending")
+            }
           >
-            Send Comment
+            {!web3State.isLogged
+              ? "Connect your metamask"
+              : web3State.networkName !== "Rinkeby"
+              ? `Unvailable on ${web3State.networkName}`
+              : "Send Comment"}
           </Button>
           <Button ms="4" onClick={debug}>
             See data
