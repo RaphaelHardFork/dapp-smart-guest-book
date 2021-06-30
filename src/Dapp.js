@@ -1,12 +1,14 @@
 import { Text, Heading, Container, Center, Textarea } from "@chakra-ui/react"
 import { Switch, Route } from "react-router-dom"
 import { ethers } from "ethers"
-import { useState } from "react"
+import { useContext, useState } from "react"
 import Dashboard from "./components/Dashboard"
 import SendComment from "./components/SendComment"
 import CommentList from "./components/CommentList"
+import { Web3Context } from "web3-hooks"
 
 const Dapp = () => {
+  const [web3State] = useContext(Web3Context)
   const [comment, setComment] = useState("")
   const [hashedComment, setHashedComment] = useState("0x")
 
@@ -26,10 +28,16 @@ const Dapp = () => {
           <Center>
             <Container mt="10">
               <Textarea
+                disabled={web3State.networkName !== "Rinkeby"}
                 onChange={handleChangeComment}
-                placeholder="Type your comment here..."
+                placeholder={
+                  web3State.networkName !== "Rinkeby"
+                    ? "The contract work only on Rinkeby"
+                    : "Type your comment here..."
+                }
                 value={comment}
                 mb="4"
+                minH="250"
               />
               <Text mb="4">Your comment:</Text>
               <Text mb="4">

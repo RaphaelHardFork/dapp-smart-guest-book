@@ -1,111 +1,130 @@
+import { ethers } from "ethers"
 import { useContext, useEffect, useReducer } from "react"
 import { Web3Context } from "web3-hooks"
 import { ContractsContext } from "../contexts/ContractsContext"
 import { commentReducer } from "../reducers/commentReducer"
+import { useToast, Link } from "@chakra-ui/react"
+const axios = require("axios")
 
 export const useSmartGuestBook = () => {
   const [web3State] = useContext(Web3Context)
   const [contract] = useContext(ContractsContext)
+  const toast = useToast()
 
-  const initialState = {
-    txStatus: "",
-    errorMessage: "",
-    commentList: [],
-    listOfArgs: [],
+  const [state, dispatch] = useReducer(commentReducer, {
+    listOfComments: [],
     displayedList: [],
+    moderator: false,
     filter: false,
+    txStatus: "",
     statusStyle: "info",
-  }
-  const [state, dispatch] = useReducer(
-    commentReducer,
-    initialState,
-    (initialState) => {
-      let data = JSON.parse(localStorage.getItem("comment-list"))
-      if (data === null || data === undefined) {
-        data = []
-      }
-      return {
-        ...initialState,
-        commentList: data,
-      }
-    }
-  )
-  const { commentList, listOfArgs, filter } = state
+    deleted: false,
+    loading: true,
+  })
 
-  useEffect(() => {
-    localStorage.setItem("comment-list", JSON.stringify(state.commentList))
-  }, [state.commentList])
-
+  // account is Moderator?
   useEffect(() => {
     if (contract) {
-      const cb = (author, hashedComment) => {
-        if (author.toLowerCase() === web3State.account) {
-          dispatch({ type: "COMMENT_LINK", author, hashedComment })
+      const checkRole = async () => {
+        try {
+          let isModerator = await contract.hasRole(
+            ethers.utils.id("MODERATOR_ROLE"),
+            web3State.account
+          )
+          dispatch({ type: "MODERATOR", payload: isModerator })
+        } catch (e) {
+          console.log(e)
         }
+      }
+      checkRole()
+    }
+  }, [contract, web3State.account])
+
+  // Comment Leaved
+  useEffect(() => {
+    if (contract) {
+      const cb = async (author, hashedComment, cid, tokenId, event) => {
+        toast({
+          title: `Comment Leaved (n°${tokenId})`,
+          description: (
+            <Link
+              isExternal
+              href={`https://rinkeby.etherscan.io/tx/${event.transactionHash}`}
+            >
+              See on Etherscan
+            </Link>
+          ),
+          status: "success",
+          duration: 7000,
+          isClosable: true,
+        })
       }
       contract.on("CommentLeaved", cb)
       return () => {
         contract.off("CommentLeaved", cb)
       }
     }
-  }, [contract, web3State.account])
+  }, [contract, toast])
 
+  // load comments history
   useEffect(() => {
     if (contract) {
+      dispatch({ type: "UPDATE" })
+      const readJSON = async (cid) => {
+        const url = `https://gateway.ipfs.io/ipfs/${cid}#x-ipfs-companion-no-redirect`
+        try {
+          const response = await axios.get(url, {
+            timeout: 5000,
+            transitional: { clarifyTimeoutError: true },
+          })
+          return response.data.comment
+        } catch (e) {
+          console.error(e)
+          return `Content not well pinned yet...`
+        }
+      }
+
       const getHistory = async () => {
         try {
-          let commentHistory = await contract.filters.CommentLeaved(null, null)
-          commentHistory = await contract.queryFilter(commentHistory)
-          dispatch({ type: "COMMENT_HISTORY", payload: commentHistory })
+          let commentAdded = await contract.filters.CommentLeaved()
+          let commentDeleted = await contract.filters.CommentDeleted()
+          commentAdded = await contract.queryFilter(commentAdded)
+          commentDeleted = await contract.queryFilter(commentDeleted)
+          const deletedId = commentDeleted.map((elem) => {
+            return elem.args["tokenId"].toString()
+          })
+          const deletedTx = commentDeleted.map((elem) => {
+            return elem.transactionHash
+          })
+          let commentsList = []
+          const createList = async () => {
+            for (let event of commentAdded) {
+              let eventContent = await readJSON(event.args["cid"])
+
+              let index = deletedId.indexOf(event.args["tokenId"].toString())
+              commentsList.push({
+                author: event.args["author"].toLowerCase(),
+                tokenId: event.args["tokenId"].toString(),
+                hashedComment: event.args["hashedComment"],
+                cid: event.args["cid"],
+                content: eventContent,
+                deleted: index !== -1 ? true : false,
+                txHash:
+                  index !== -1
+                    ? [event.transactionHash, deletedTx[index]]
+                    : [event.transactionHash],
+              })
+            }
+          }
+          createList()
+          dispatch({ type: "COMMENT_HISTORY", commentsList })
         } catch (e) {
-          console.log(e)
+          console.error(e)
         }
       }
       getHistory()
     }
-  }, [contract, web3State.account])
-
-  useEffect(() => {
-    let linkedHash = commentList.map((elem) => {
-      return elem.hash
-    })
-    let list = []
-
-    for (let arg of listOfArgs) {
-      if (filter) {
-        if (arg[0].toLowerCase() !== web3State.account.toLowerCase()) {
-          continue
-        }
-      }
-      let index = linkedHash.indexOf(arg[1])
-      if (index !== -1) {
-        list.push({
-          author: arg[0],
-          hashedComment: arg[1],
-          content: commentList[index].content,
-          txHash: commentList[index].txHash,
-        })
-      } else {
-        list.push({
-          author: arg[0],
-          hashedComment: arg[1],
-          content: "Content not linked",
-          txHash: "TxHash not found yet",
-        })
-      }
-    }
-    dispatch({ type: "DISPLAY_LIST", payload: list })
-
-    /*
-        let list = state.commentList.map((elem) => {
-      return elem.hash
-    })
-
-    console.log(list.indexOf(state.listOfArgs[17][1]))
-    console.log(state.commentList[5])
-    console.log(state.listOfArgs[17][1])
-    */
-  }, [filter, listOfArgs, commentList, dispatch, web3State.account])
+  }, [contract])
 
   useEffect(() => {
     dispatch({ type: "TX_STATUS" })
