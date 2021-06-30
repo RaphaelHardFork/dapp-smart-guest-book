@@ -6,7 +6,7 @@ import { useSmartGuestBook } from "../hooks/useSmartGuestBook"
 
 const SendComment = ({ comment, hashedComment }) => {
   const [web3State] = useContext(Web3Context)
-  const [pinJSON, readJSON] = usePinataCloud()
+  const [pinJSON] = usePinataCloud()
   const [smartGuestBook, state, dispatch] = useSmartGuestBook()
   const { txStatus, statusStyle } = state
 
@@ -15,30 +15,17 @@ const SendComment = ({ comment, hashedComment }) => {
     try {
       let author = web3State.account
       let cid = await pinJSON({ author, comment, hashedComment })
-      console.log(cid)
       dispatch({ type: "TX_WAITING" })
       let tx = await smartGuestBook.comment(hashedComment, cid)
       dispatch({ type: "TX_PENDING" })
       await tx.wait()
       dispatch({ type: "TX_SUCCESS" })
-      /*
-      dispatch({
-        type: "COMMENT_ADDED",
-        comment,
-        hashedComment,
-        tx,
-        author,
-      })
-      */
     } catch (e) {
-      console.log(e)
+      console.error(e)
       dispatch({ type: "TX_FAILURE", payload: e })
     }
   }
 
-  const debug = async () => {
-    console.log(state.listOfComments)
-  }
   return (
     <>
       <Flex flexDirection="column">
@@ -65,9 +52,6 @@ const SendComment = ({ comment, hashedComment }) => {
               : web3State.networkName !== "Rinkeby"
               ? `Unvailable on ${web3State.networkName}`
               : "Send Comment"}
-          </Button>
-          <Button ms="4" onClick={debug}>
-            See data
           </Button>
         </Box>
         {txStatus.startsWith("Failed") || txStatus.startsWith("Success") ? (

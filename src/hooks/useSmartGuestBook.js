@@ -1,43 +1,16 @@
 import { ethers } from "ethers"
-import { useCallback, useContext, useEffect, useReducer, useState } from "react"
+import { useContext, useEffect, useReducer } from "react"
 import { Web3Context } from "web3-hooks"
 import { ContractsContext } from "../contexts/ContractsContext"
 import { commentReducer } from "../reducers/commentReducer"
-import { usePinataCloud } from "./usePinataCloud"
+import { useToast, Link } from "@chakra-ui/react"
 const axios = require("axios")
 
 export const useSmartGuestBook = () => {
   const [web3State] = useContext(Web3Context)
   const [contract] = useContext(ContractsContext)
-  const [pinJSON, readJSON] = usePinataCloud()
-  const [cid, setCID] = useState("")
+  const toast = useToast()
 
-  /*
-  const initialState = {
-    commentsData: [],
-    listOfComments: [],
-    displayedList: [],
-    moderator: false,
-    filter: false,
-    txStatus: "",
-    statusStyle: "info",
-    deleted: false,
-  }
-  const [state, dispatch] = useReducer(
-    commentReducer,
-    initialState,
-    (initialState) => {
-      let data = JSON.parse(localStorage.getItem("comment-list"))
-      if (data === null || data === undefined) {
-        data = []
-      }
-      return {
-        ...initialState,
-        commentsData: data,
-      }
-    }
-  )
-  */
   const [state, dispatch] = useReducer(commentReducer, {
     listOfComments: [],
     displayedList: [],
@@ -46,9 +19,10 @@ export const useSmartGuestBook = () => {
     txStatus: "",
     statusStyle: "info",
     deleted: false,
+    loading: true,
   })
-  const { listOfComments, filter, deleted } = state
 
+  // account is Moderator?
   useEffect(() => {
     if (contract) {
       const checkRole = async () => {
@@ -66,54 +40,50 @@ export const useSmartGuestBook = () => {
     }
   }, [contract, web3State.account])
 
+  // Comment Leaved
   useEffect(() => {
     if (contract) {
       const cb = async (author, hashedComment, cid, tokenId, event) => {
-        const content = await readJSON(cid)
-        const metadata = {
-          tokenId: tokenId.toString(),
-          author,
-          hashedComment,
-          content: content.comment, // need modification
-          deleted: false,
-          txHash: event.transactionHash,
-        }
-        const pin = async () => {
-          pinJSON(metadata)
-        }
-        // CHANGE TOKEN URI NOW?
-        //pin()
-        /*
-        if (author.toLowerCase() === web3State.account) {
-          dispatch({
-            type: "COMMENT_LINK",
-            author,
-            hashedComment,
-            tokenId: tokenId.toString(),
-          })
-          console.log("linkage")
-          localStorage.setItem("comment-list", JSON.stringify(commentsData))
-        }
-        */
+        toast({
+          title: `Comment Leaved (n°${tokenId})`,
+          description: (
+            <Link
+              isExternal
+              href={`https://rinkeby.etherscan.io/tx/${event.transactionHash}`}
+            >
+              See on Etherscan
+            </Link>
+          ),
+          status: "success",
+          duration: 7000,
+          isClosable: true,
+        })
       }
       contract.on("CommentLeaved", cb)
       return () => {
         contract.off("CommentLeaved", cb)
       }
     }
-  }, [contract, web3State.account, pinJSON, readJSON])
+  }, [contract, toast])
 
+  // load comments history
   useEffect(() => {
     if (contract) {
+      dispatch({ type: "UPDATE" })
       const readJSON = async (cid) => {
         const url = `https://gateway.ipfs.io/ipfs/${cid}#x-ipfs-companion-no-redirect`
         try {
-          const response = await axios.get(url)
+          const response = await axios.get(url, {
+            timeout: 5000,
+            transitional: { clarifyTimeoutError: true },
+          })
           return response.data.comment
         } catch (e) {
-          console.log(e)
+          console.error(e)
+          return `Content not well pinned yet...`
         }
       }
+
       const getHistory = async () => {
         try {
           let commentAdded = await contract.filters.CommentLeaved()
@@ -121,7 +91,7 @@ export const useSmartGuestBook = () => {
           commentAdded = await contract.queryFilter(commentAdded)
           commentDeleted = await contract.queryFilter(commentDeleted)
           const deletedId = commentDeleted.map((elem) => {
-            return elem.args[3].toString()
+            return elem.args["tokenId"].toString()
           })
           const deletedTx = commentDeleted.map((elem) => {
             return elem.transactionHash
@@ -129,15 +99,15 @@ export const useSmartGuestBook = () => {
           let commentsList = []
           const createList = async () => {
             for (let event of commentAdded) {
-              console.log(event.args["cid"])
-              //console.log(await readJSON(event.args["cid"]))
+              let eventContent = await readJSON(event.args["cid"])
+
               let index = deletedId.indexOf(event.args["tokenId"].toString())
               commentsList.push({
                 author: event.args["author"].toLowerCase(),
                 tokenId: event.args["tokenId"].toString(),
                 hashedComment: event.args["hashedComment"],
                 cid: event.args["cid"],
-                content: await readJSON(event.args["cid"]),
+                content: eventContent,
                 deleted: index !== -1 ? true : false,
                 txHash:
                   index !== -1
@@ -149,62 +119,12 @@ export const useSmartGuestBook = () => {
           createList()
           dispatch({ type: "COMMENT_HISTORY", commentsList })
         } catch (e) {
-          console.log(e)
+          console.error(e)
         }
       }
       getHistory()
     }
-  }, [contract, web3State.account])
-
-  /*
-  useEffect(() => {
-    let linkedHash = commentsData.map((elem) => {
-      return elem.hash
-    })
-    let list = []
-
-    for (let comment of listOfComments) {
-      if (filter) {
-        if (comment.author !== web3State.account.toLowerCase()) {
-          continue
-        }
-      }
-      if (!deleted) {
-        if (comment.deleted) {
-          continue
-        }
-      }
-      let index = linkedHash.indexOf(comment.hashedComment)
-      if (index !== -1) {
-        list.push({
-          author: comment.author,
-          hashedComment: comment.hashedComment,
-          content: commentsData[index].content,
-          txHash: comment.txHash,
-          tokenId: comment.tokenId,
-          deleted: comment.deleted,
-        })
-      } else {
-        list.push({
-          author: comment.author,
-          hashedComment: comment.hashedComment,
-          content: "Content not linked",
-          txHash: comment.txHash,
-          tokenId: comment.tokenId,
-          deleted: comment.deleted,
-        })
-      }
-    }
-    dispatch({ type: "DISPLAY_LIST", payload: list })
-  }, [
-    filter,
-    listOfComments,
-    commentsData,
-    dispatch,
-    web3State.account,
-    deleted,
-  ])
-  */
+  }, [contract])
 
   useEffect(() => {
     dispatch({ type: "TX_STATUS" })

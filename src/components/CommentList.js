@@ -9,25 +9,36 @@ import {
   Link,
   Flex,
   Button,
+  Alert,
+  AlertIcon,
+  Progress,
 } from "@chakra-ui/react"
 import { useContext } from "react"
 import { Web3Context } from "web3-hooks"
+import { usePinataCloud } from "../hooks/usePinataCloud"
 import { useSmartGuestBook } from "../hooks/useSmartGuestBook"
 
 const CommentList = () => {
   const [web3State] = useContext(Web3Context)
+  const [, deleteJSON] = usePinataCloud()
   const [smartGuestBook, state, dispatch] = useSmartGuestBook()
-  const { filter, displayedList, txStatus, moderator, listOfComments } = state
+  const { filter, deleted, txStatus, moderator, listOfComments } = state
 
-  async function handleDeleteComment(tokenId) {
-    dispatch({ type: "TX_WAITING" })
+  async function handleDeleteComment(cid, tokenId) {
+    dispatch({ type: "TX_UNPIN" })
     try {
+      await deleteJSON(cid)
+    } catch (e) {
+      console.error(e)
+    }
+    try {
+      dispatch({ type: "TX_WAITING" })
       let tx = await smartGuestBook.deleteComment(tokenId)
       dispatch({ type: "TX_PENDING" })
       await tx.wait()
       dispatch({ type: "TX_SUCCESS" })
     } catch (e) {
-      console.log(e)
+      console.error(e)
       dispatch({ type: "TX_FAILURE", payload: e })
     }
   }
@@ -71,8 +82,29 @@ const CommentList = () => {
           </FormLabel>
         </FormControl>
       </Flex>
+      {listOfComments.length ? (
+        ""
+      ) : (
+        <Flex justifyContent="center" flexDirection="column">
+          <Text textAlign="center" mb="4" fontSize="4xl">
+            Loading...
+          </Text>
+          <Progress minW="25" color="red" size="md" isIndeterminate />
+        </Flex>
+      )}
+
       <Box as="ul">
         {listOfComments.map((elem) => {
+          if (filter) {
+            if (elem.author !== web3State.account.toLowerCase()) {
+              return ""
+            }
+          }
+          if (!deleted) {
+            if (elem.deleted) {
+              return ""
+            }
+          }
           return (
             <Box
               as="li"
@@ -96,42 +128,81 @@ const CommentList = () => {
                   {" "}
                   <Text as="b">Hashed comment:</Text> {elem.hashedComment}
                 </Text>
-                <Link
-                  href={`https://rinkeby.etherscan.io/tx/${elem.txHash}`}
-                  as="a"
-                  isExternal
-                >
-                  {elem.txHash}
-                </Link>
-                <Text>{elem.cid}</Text>
+                {elem.txHash.map((hash) => {
+                  return (
+                    <Link
+                      key={hash}
+                      href={`https://rinkeby.etherscan.io/tx/${hash}`}
+                      as="a"
+                      isExternal
+                    >
+                      {hash}
+                    </Link>
+                  )
+                })}
+
+                <Text>{elem.deleted ? "CID not avaliable" : elem.cid}</Text>
                 <Heading fontSize="2xl" my="4" as="h3">
                   Content:
                 </Heading>
-                <Box borderRadius="10" p="4" bg="white">
-                  <Text>
-                    {elem.deleted ? (
-                      <Text as="b" color="red">
-                        Comment deleted
-                      </Text>
-                    ) : (
-                      elem.content
-                    )}
-                  </Text>
+                <Box
+                  borderRadius="10"
+                  p="4"
+                  bg={
+                    elem.content === "Content not well pinned yet..."
+                      ? "gray.300"
+                      : "white"
+                  }
+                >
+                  {elem.deleted ? (
+                    <Text as="b" color="red">
+                      Comment deleted
+                    </Text>
+                  ) : elem.content === "Content not well pinned yet..." ? (
+                    <Text>
+                      Upload on IPFS can take sometime, check the{" "}
+                      <Link
+                        color="teal.700"
+                        fontWeight="bold"
+                        as="a"
+                        isExternal
+                        href={`https://cid.ipfs.io/#${elem.cid}`}
+                      >
+                        CID inspector
+                      </Link>{" "}
+                      during this time.
+                    </Text>
+                  ) : (
+                    elem.content
+                  )}
                 </Box>
               </Box>
               {moderator && !elem.deleted && (
-                <Button
-                  mt="4"
-                  size="lg"
-                  isLoading={
-                    txStatus.startsWith("Waiting") ||
-                    txStatus.startsWith("Pending")
-                  }
-                  onClick={() => handleDeleteComment(elem.tokenId)}
-                  colorScheme="red"
-                >
-                  Delete
-                </Button>
+                <>
+                  <Flex mt="4">
+                    <Button
+                      me="4"
+                      size="lg"
+                      isLoading={
+                        txStatus.startsWith("Waiting") ||
+                        txStatus.startsWith("Pending") ||
+                        txStatus.startsWith("Unpin")
+                      }
+                      onClick={() =>
+                        handleDeleteComment(elem.cid, elem.tokenId)
+                      }
+                      colorScheme="red"
+                    >
+                      Delete
+                    </Button>
+                    {!!txStatus && (
+                      <Alert status="error">
+                        <AlertIcon />
+                        {txStatus}
+                      </Alert>
+                    )}
+                  </Flex>
+                </>
               )}
             </Box>
           )

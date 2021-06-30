@@ -10,21 +10,24 @@ export const usePinataCloud = () => {
           pinata_secret_api_key: `${process.env.REACT_APP_API_SECRET}`,
         },
       })
-      console.log("PINNED to IPFS")
       return response.data.IpfsHash
     } catch (e) {
       console.error(e)
     }
   }
 
-  const readJSON = async (cid) => {
-    const url = `https://gateway.ipfs.io/ipfs/${cid}#x-ipfs-companion-no-redirect`
+  const deleteJSON = async (cid) => {
+    const url = `https://api.pinata.cloud/pinning/unpin/${cid}`
     try {
-      const response = await axios.get(url)
-      return response.data
+      await axios.delete(url, {
+        headers: {
+          pinata_api_key: `${process.env.REACT_APP_API_KEY}`,
+          pinata_secret_api_key: `${process.env.REACT_APP_API_SECRET}`,
+        },
+      })
     } catch (e) {
-      console.log(e)
+      console.error(e)
     }
   }
-  return [pinJSON, readJSON]
+  return [pinJSON, deleteJSON]
 }

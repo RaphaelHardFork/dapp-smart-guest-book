@@ -1,5 +1,8 @@
 export const commentReducer = (state, action) => {
   switch (action.type) {
+    case "UPDATE":
+      return { ...state, txStatus: "", loading: true }
+
     case "TX_WAITING":
       return {
         ...state,
@@ -10,6 +13,12 @@ export const commentReducer = (state, action) => {
       return {
         ...state,
         txStatus: "Pinning to IPFS",
+      }
+
+    case "TX_UNPIN":
+      return {
+        ...state,
+        txStatus: "Unpinning from IPFS",
       }
 
     case "TX_PENDING":
@@ -25,9 +34,13 @@ export const commentReducer = (state, action) => {
       }
 
     case "TX_FAILURE":
+      let message = `Failed with ${action.payload.message}`
+      if (action.payload.code === "UNPREDICTABLE_GAS_LIMIT") {
+        message = "The comment is already deleted, please refresh your browser"
+      }
       return {
         ...state,
-        txStatus: `Failed with ${action.payload.message}`,
+        txStatus: message,
       }
 
     case "FILTER":
@@ -76,43 +89,11 @@ export const commentReducer = (state, action) => {
         statusStyle: style,
       }
 
-    case "COMMENT_ADDED":
-      let commentInfo = {
-        content: action.comment,
-        hash: action.hashedComment,
-        author: action.author.toLowerCase(),
-        txHash: action.tx.hash,
-        tokenId: 0,
-      }
-      return {
-        ...state,
-        commentsData: [...state.commentsData, commentInfo],
-      }
-
-    case "COMMENT_LINK":
-      let listOfHash = state.commentsData.map((elem) => {
-        return elem.hash
-      })
-      let index = listOfHash.indexOf(action.hashedComment)
-      let newCommentsData = state.commentsData
-      if (index !== -1) {
-        newCommentsData[index].tokenId = action.tokenId
-      }
-      return {
-        ...state,
-        commentsData: newCommentsData,
-      }
-
     case "COMMENT_HISTORY":
       return {
         ...state,
         listOfComments: action.commentsList,
-      }
-
-    case "DISPLAY_LIST":
-      return {
-        ...state,
-        displayedList: [...action.payload],
+        loading: false,
       }
 
     default:
