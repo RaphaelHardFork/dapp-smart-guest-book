@@ -1,7 +1,6 @@
 # TODO
 
-- Changer la base de données (localStorage => IPFS)
-- changer le token URI après la création du NFT pour avoir toute les métadata (tokenId,TxHash,...)
+- Vendre les NFT
 
 ## IPFS
 
