@@ -12,11 +12,14 @@ import {
   Alert,
   AlertIcon,
   Progress,
+  Badge,
 } from "@chakra-ui/react"
+import { ethers } from "ethers"
 import { useContext } from "react"
 import { Web3Context } from "web3-hooks"
 import { usePinataCloud } from "../hooks/usePinataCloud"
 import { useSmartGuestBook } from "../hooks/useSmartGuestBook"
+import SellComment from "./SellComment"
 
 const CommentList = () => {
   const [web3State] = useContext(Web3Context)
@@ -85,7 +88,7 @@ const CommentList = () => {
       {listOfComments.length ? (
         ""
       ) : (
-        <Flex justifyContent="center" flexDirection="column">
+        <Flex mb="100" justifyContent="center" flexDirection="column">
           <Text textAlign="center" mb="4" fontSize="4xl">
             Loading...
           </Text>
@@ -123,7 +126,16 @@ const CommentList = () => {
             >
               <Box pe="4">
                 <Heading isTruncated>Comment from {elem.author}</Heading>
-                <Text textAlign="end">Comment n°{elem.tokenId}</Text>
+                <Flex my="4" justifyContent="space-between" flexDirection="row">
+                  <Badge fontSize="lg" borderRadius="20" p="3">
+                    {!Number(elem.price)
+                      ? "Not for sale"
+                      : `${ethers.utils.formatEther(elem.price)} ETH`}
+                  </Badge>
+                  <Text alignSelf="start" textAlign="end">
+                    Comment n°{elem.tokenId}
+                  </Text>
+                </Flex>
                 <Text>
                   {" "}
                   <Text as="b">Hashed comment:</Text> {elem.hashedComment}
@@ -177,9 +189,10 @@ const CommentList = () => {
                   )}
                 </Box>
               </Box>
-              {moderator && !elem.deleted && (
-                <>
-                  <Flex mt="4">
+              <Flex mt="4">
+                <SellComment tokenId={elem.tokenId} />
+                {moderator && !elem.deleted && (
+                  <>
                     <Button
                       me="4"
                       size="lg"
@@ -201,9 +214,9 @@ const CommentList = () => {
                         {txStatus}
                       </Alert>
                     )}
-                  </Flex>
-                </>
-              )}
+                  </>
+                )}
+              </Flex>
             </Box>
           )
         })}

@@ -59,17 +59,38 @@ export const useSmartGuestBook = () => {
           isClosable: true,
         })
       }
+      const cb1 = async (seller, tokenId, price, event) => {
+        toast({
+          title: `Comment n°${tokenId} pit in sale for ${price}`,
+          description: (
+            <Link
+              isExternal
+              href={`https://rinkeby.etherscan.io/tx/${event.transactionHash}`}
+            >
+              See on Etherscan
+            </Link>
+          ),
+          status: "success",
+          duration: 7000,
+          isClosable: true,
+        })
+      }
+
       contract.on("CommentLeaved", cb)
+      contract.on("CommentInSale", cb1)
       return () => {
         contract.off("CommentLeaved", cb)
+        contract.off("CommentInSale", cb1)
       }
     }
   }, [contract, toast])
 
-  // load comments history
+  // load comments
   useEffect(() => {
     if (contract) {
       dispatch({ type: "UPDATE" })
+
+      // read CID
       const readJSON = async (cid) => {
         const url = `https://gateway.ipfs.io/ipfs/${cid}#x-ipfs-companion-no-redirect`
         try {
@@ -84,6 +105,7 @@ export const useSmartGuestBook = () => {
         }
       }
 
+      // get history and display
       const getHistory = async () => {
         try {
           let commentAdded = await contract.filters.CommentLeaved()
@@ -100,7 +122,9 @@ export const useSmartGuestBook = () => {
           const createList = async () => {
             for (let event of commentAdded) {
               let eventContent = await readJSON(event.args["cid"])
-
+              let price = await contract.inSale(
+                event.args["tokenId"].toString()
+              )
               let index = deletedId.indexOf(event.args["tokenId"].toString())
               commentsList.push({
                 author: event.args["author"].toLowerCase(),
@@ -109,6 +133,7 @@ export const useSmartGuestBook = () => {
                 cid: event.args["cid"],
                 content: eventContent,
                 deleted: index !== -1 ? true : false,
+                price: price.toString(),
                 txHash:
                   index !== -1
                     ? [event.transactionHash, deletedTx[index]]

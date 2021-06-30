@@ -1,6 +1,10 @@
 # TODO
 
 - Vendre les NFT
+- not for sale
+- mettre en components
+- pb actualisation Sell
+-
 
 ## IPFS
 
