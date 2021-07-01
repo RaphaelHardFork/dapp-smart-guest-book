@@ -44,7 +44,8 @@ const SendComment = ({ comment, hashedComment }) => {
               web3State.networkName !== "Rinkeby" ||
               txStatus.startsWith("Waiting") ||
               txStatus.startsWith("Pending") ||
-              txStatus.startsWith("Pinning")
+              txStatus.startsWith("Pinning") ||
+              !comment
             }
           >
             {!web3State.isLogged
@@ -55,7 +56,7 @@ const SendComment = ({ comment, hashedComment }) => {
           </Button>
         </Box>
         {txStatus.startsWith("Failed") || txStatus.startsWith("Success") ? (
-          <Alert status={statusStyle} borderRadius="10">
+          <Alert mb="10" status={statusStyle} borderRadius="10">
             <AlertIcon />
             {txStatus}
           </Alert>

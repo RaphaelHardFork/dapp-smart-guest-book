@@ -3,6 +3,40 @@ export const commentReducer = (state, action) => {
     case "UPDATE":
       return { ...state, txStatus: "", loading: true }
 
+    case "EVENT_LISTENED":
+      return {
+        ...state,
+        success: !state.success,
+      }
+
+    case "EVENT_PRICE":
+      let newPriceMap = state.priceMap.map((elem) => {
+        if (elem[0] === action.tokenId.toString()) {
+          return [elem[0], action.price]
+        }
+        return elem
+      })
+      return {
+        ...state,
+        priceMap: newPriceMap,
+      }
+
+    case "EVENT_OWNER":
+      console.log(action.tokenId)
+      console.log(action.owner)
+      console.log(state.ownerMap)
+      let newOwnerMap = state.ownerMap.map((elem) => {
+        if (elem[0] === action.tokenId.toString()) {
+          return [elem[0], action.owner]
+        }
+        return elem
+      })
+      console.log(newOwnerMap)
+      return {
+        ...state,
+        ownerMap: newOwnerMap,
+      }
+
     case "TX_WAITING":
       return {
         ...state,
@@ -93,6 +127,8 @@ export const commentReducer = (state, action) => {
       return {
         ...state,
         listOfComments: action.commentsList,
+        priceMap: action.mapOfPrice,
+        ownerMap: action.mapOfOwner,
         loading: false,
       }
 

@@ -1,10 +1,9 @@
 # TODO
 
-- Vendre les NFT
-- not for sale
-- mettre en components
-- pb actualisation Sell
--
+- clean input after send comment
+- multiple event listen (x5~6)
+- check deleted comment
+- set price at zero after transfer /!\
 
 ## IPFS
 

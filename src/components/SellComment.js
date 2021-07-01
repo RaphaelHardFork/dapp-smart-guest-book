@@ -3,17 +3,17 @@ import { ethers } from "ethers"
 import { useState } from "react"
 import { useSmartGuestBook } from "../hooks/useSmartGuestBook"
 
-const SellComment = ({ tokenId }) => {
+const SellComment = ({ tokenId, price }) => {
   const [smartGuestBook, state, dispatch] = useSmartGuestBook()
-  const { txStatus, price } = state
+  const { txStatus } = state
   const [amount, setAmount] = useState()
   async function handleSellComment() {
     if (!Number(price)) {
+      // put on sale
       if (!amount) {
         console.log("SET AMOUNT")
         setAmount(0.1)
       } else {
-        // sell
         dispatch({ type: "TX_WAITING" })
         try {
           let tx = await smartGuestBook.sellComment(
@@ -22,11 +22,11 @@ const SellComment = ({ tokenId }) => {
           )
           dispatch({ type: "TX_PENDING" })
           await tx.wait()
-          dispatch({ type: "TX_SUCCESS" })
         } catch (e) {
           console.error(e)
-          dispatch({ type: "TX_SUCCESS", payload: e })
+          dispatch({ type: "TX_FAILURE", payload: e })
         }
+        setAmount(0)
       }
     } else {
       //remove from sale
@@ -35,13 +35,13 @@ const SellComment = ({ tokenId }) => {
         let tx = await smartGuestBook.removeFromSale(tokenId)
         dispatch({ type: "TX_PENDING" })
         await tx.wait()
-        dispatch({ type: "TX_SUCCESS" })
       } catch (e) {
         console.error(e)
-        dispatch({ type: "TX_SUCCESS", payload: e })
+        dispatch({ type: "TX_FAILURE", payload: e })
       }
     }
   }
+
   return (
     <>
       <Button
@@ -55,7 +55,7 @@ const SellComment = ({ tokenId }) => {
       >
         {!Number(price) ? "Sell" : "Remove from sale"}
       </Button>
-      {amount && (
+      {!!amount && (
         <Input
           value={amount}
           _placeholder={{ color: "gray" }}
