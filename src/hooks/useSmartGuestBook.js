@@ -58,8 +58,6 @@ export const useSmartGuestBook = () => {
   }, [contract, web3State.account])
 
   useEffect(() => {
-    console.log("USE EFFECT START")
-
     // Comment Leaved
     const cb = async (author, hashedComment, cid, tokenId, event) => {
       toast({
@@ -82,7 +80,6 @@ export const useSmartGuestBook = () => {
     }
     // Comment put in sale
     const cb1 = async (seller, tokenId, price, event) => {
-      console.log(event)
       toast({
         title: `Comment n°${tokenId} put in sale for ${ethers.utils.formatEther(
           price.toString()
